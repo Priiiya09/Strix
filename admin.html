@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strix CMS Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Epilogue:ital,wght@0,200;0,300;0,400;0,500;1,200;1,300&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080808;--bg1:#0e0e0e;--bg2:#141414;--bg3:#1a1a1a;--bone:#EAE4D8;--silver:#8A8680;--line:rgba(138,134,128,0.18);--line2:rgba(138,134,128,0.35);--accent:#C8F5B0;--syne:'Syne',sans-serif;--epi:'Epilogue',sans-serif}
+body{background:radial-gradient(ellipse at 50% -15%, rgba(255,255,255,.18), transparent 45%),linear-gradient(180deg,#050505,var(--bg));color:var(--bone);font-family:var(--epi);font-weight:300;line-height:1.6;padding:2rem}
+h1,h2,h3{font-family:var(--syne)}
+.top{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-bottom:2rem}
+.top a,.btn{background:var(--bone);color:var(--bg);border:none;border-radius:3px;padding:.75rem 1.15rem;text-decoration:none;font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.btn.secondary{background:transparent;color:var(--bone);border:.5px solid var(--line2)}
+.btn.danger{background:#301111;color:#fff;border:.5px solid #663333}
+.layout{display:grid;grid-template-columns:320px 1fr;gap:1.25rem}
+.panel{background:linear-gradient(145deg,rgba(20,20,20,.95),rgba(8,8,8,.95));border:.5px solid var(--line);border-radius:4px;padding:1.25rem}
+.project-item{border:.5px solid var(--line);padding:1rem;border-radius:4px;margin:.75rem 0;cursor:pointer}
+.project-item.active,.project-item:hover{border-color:var(--line2);background:var(--bg3)}
+.project-item p{color:var(--silver);font-size:.82rem}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.full{grid-column:1/-1}
+label{display:block;color:var(--silver);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.4rem}
+input,textarea{width:100%;background:var(--bg2);border:.5px solid var(--line2);border-radius:3px;color:var(--bone);padding:.85rem 1rem;outline:none}
+textarea{min-height:115px;resize:vertical}
+.actions{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem}
+.preview{width:180px;height:110px;object-fit:cover;border:.5px solid var(--line2);border-radius:4px;margin-top:.75rem;display:none}
+.note{color:var(--silver);font-size:.9rem;margin-bottom:1rem}
+@media(max-width:900px){body{padding:1rem}.layout,.form-grid{grid-template-columns:1fr}.top{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div><h1>Strix CMS Admin</h1><p class="note">Edit project content, case study text and image.</p></div>
+  <a href="index.html">Open Website</a>
+</div>
+<div class="layout">
+  <aside class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem"><h2>Projects</h2><button class="btn secondary" onclick="addProject()">+ Add</button></div>
+    <div id="projectList"></div>
+    <button class="btn danger" style="width:100%;margin-top:1rem" onclick="resetData()">Reset</button>
+  </aside>
+  <main class="panel">
+    <p class="note">This is frontend-only CMS using localStorage. For real live CMS, backend/database is required.</p>
+    <div class="form-grid">
+      <div><label>Project ID</label><input id="id"></div>
+      <div><label>Short Name</label><input id="abbr"></div>
+      <div><label>Title</label><input id="title"></div>
+      <div><label>Industry</label><input id="industry"></div>
+      <div><label>Result Short</label><input id="resShort"></div>
+      <div><label>Result Label</label><input id="resLabel"></div>
+      <div class="full"><label>Description</label><textarea id="desc"></textarea></div>
+      <div class="full"><label>Project Image</label><input id="imageInput" type="file" accept="image/*" onchange="handleImage(event)"><img id="preview" class="preview"></div>
+      <div><label>Challenge Title</label><input id="challengeTitle"></div>
+      <div><label>Approach Title</label><input id="approachTitle"></div>
+      <div class="full"><label>Challenge Text</label><textarea id="challengeText"></textarea></div>
+      <div class="full"><label>Approach Text</label><textarea id="approachText"></textarea></div>
+      <div class="full"><label>Deliverables - one per line</label><textarea id="services"></textarea></div>
+      <div class="full"><label>Results - Number | Label | Description, one per line</label><textarea id="results"></textarea></div>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="saveProject()">Save Project</button>
+      <button class="btn secondary" onclick="clearForm()">Clear</button>
+      <button class="btn danger" onclick="deleteProject()">Delete</button>
+    </div>
+  </main>
+</div>
+<script>
+const DEFAULT_PROJECTS = [
+  { id:'kp', title:'The Kundli Pro', thumb:'pt-kp', abbr:'KP', image:'', tags:['design','brand','mobile'],
+    industry:'Spiritual Tech · Mobile App',
+    cats:['Design','Branding','Mobile App','MVP'],
+    desc:'Full rebrand, complete UX redesign, and mobile MVP development for a relaunching astrology platform. Built to make a technically capable product impossible to ignore.',
+    result:'50,000+ downloads · Trending on Play Store',
+    resShort:'50K+', resLabel:'App downloads',
+    services:['Rebranded visual identity','Redesigned website UI/UX','Designed & developed mobile app MVP','Created promotional videos & product visuals'],
+    challengeTitle:'A capable product no one was using.',
+    challengeText:'The Kundli Pro had genuine features users loved — but the brand looked dated, the app experience was confusing, and nothing communicated trust at first glance. Users were dropping off before they ever saw what the product could do. The relaunching team needed a complete transformation: a new visual identity, a rebuilt app experience, and launch assets that would make the product impossible to scroll past in the Play Store.',
+    approachTitle:'Redesigned from identity to interface.',
+    approachText:'We started with brand — creating a visual identity that balanced spiritual depth with modern app design. From there, we rebuilt the entire app UX, rethinking navigation, onboarding, and feature discovery. The development team then built the MVP directly from our designs, eliminating the usual design-to-dev translation gap. Simultaneously, we produced promotional visuals to support the Play Store launch.',
+    results:[
+      {n:'50K+', label:'App downloads', desc:'In the months following launch'},
+      {n:'#1', label:'Trending · Play Store', desc:'Peaked on launch week'},
+      {n:'Full', label:'Identity rebrand', desc:'Brand, app, and promo assets'},
+      {n:'1 team', label:'Zero handoffs', desc:'Design, dev & production under one roof'},
+    ]
+  },
+  { id:'ri', title:'Ryvon Intelligence', thumb:'pt-ri', abbr:'RI', image:'', tags:['design','dev','saas'],
+    industry:'SaaS · AI Platform',
+    cats:['Design','Development','SaaS','MVP'],
+    desc:'End-to-end product design for an AI orchestration platform that coordinates chat, voice, automation, and workflows from a single command interface. Zero to launch-ready in under 3 weeks.',
+    result:'Under 3 weeks · Full design system delivered',
+    resShort:'<3wk', resLabel:'Idea to launch',
+    services:['Full information architecture','Command interface UX design','Dashboard & agent sidebar','Workflow builder design','Complete design system handoff'],
+    challengeTitle:'Complex AI capabilities. Zero interface clarity.',
+    challengeText:'Ryvon Intelligence had a technically powerful product — multi-agent orchestration, voice, automation, workflows — but no interface to show for it. The founding team needed to go from concept to launch-ready design in weeks, not months, with a design system their dev team could build directly from. Every interaction had to make a complex platform feel intuitive from day one.',
+    approachTitle:'Information architecture first, then design.',
+    approachText:'We began with a full information architecture pass — mapping all platform capabilities to user workflows before touching a single screen. This gave us a foundation that prevented design debt later. We then built the command interface, dashboard, agent sidebar, and workflow builder in parallel, maintaining a live design system throughout. The client had a fully handoff-ready product in under 3 weeks.',
+    results:[
+      {n:'<3wk', label:'Concept to launch-ready', desc:'From kickoff to full handoff'},
+      {n:'Full', label:'Design system', desc:'Production-ready component library'},
+      {n:'5', label:'Core modules designed', desc:'Command, dashboard, agents, workflows, onboarding'},
+      {n:'0', label:'Revision cycles wasted', desc:'IA-first process eliminated rework'},
+    ]
+  },
+  { id:'aw', title:'Abhiwan Technology', thumb:'pt-aw', abbr:'AW', image:'', tags:['design','brand'],
+    industry:'Gaming · XR · Blockchain',
+    cats:['Design','Branding','Web'],
+    desc:'Enterprise website for a multi-vertical technology company operating across XR, AI, blockchain, and gaming. Complex services, made immediately clear to global enterprise buyers.',
+    result:'Stronger global brand · Improved enterprise credibility',
+    resShort:'Global', resLabel:'Enterprise reach',
+    services:['Modern scalable website interface','Service architecture & product showcases','Visual consistency across all pages','UX optimised for clarity & conversion'],
+    challengeTitle:'Too much to say. No one was listening.',
+    challengeText:'Abhiwan Technology operated across four major verticals — XR, AI, blockchain, and gaming — serving enterprise clients globally. But their existing web presence made the breadth of their capabilities feel chaotic rather than impressive. Enterprise buyers were landing on the site and leaving confused. The challenge was to make a genuinely complex business feel immediately authoritative and trustworthy.',
+    approachTitle:'Architecture before aesthetics.',
+    approachText:'We started by restructuring the information architecture — creating a clear hierarchy that let enterprise buyers self-navigate to their relevant vertical without being overwhelmed by the full breadth of services. We then built a visual system that communicated scale and technical credibility without sacrificing clarity. The result is a site that matches the ambition of the business it represents.',
+    results:[
+      {n:'Global', label:'Enterprise reach', desc:'Credible across US, UK & EU markets'},
+      {n:'4', label:'Verticals unified', desc:'XR, AI, blockchain & gaming — coherent'},
+      {n:'↑', label:'Enterprise credibility', desc:'Consistently noted by new business contacts'},
+      {n:'1', label:'Visual system', desc:'Consistent across all pages and verticals'},
+    ]
+  },
+  { id:'gr', title:'Grovia Platform', thumb:'pt-gr', abbr:'GP', image:'', tags:['design','dev','saas'],
+    industry:'B2B SaaS · Growth Tools',
+    cats:['Design','Development','SaaS'],
+    desc:'SaaS dashboard design and development for a B2B growth platform. Complex data made simple through intentional visual hierarchy and user-first information architecture.',
+    result:'Dashboard launched in 6 weeks',
+    resShort:'6wk', resLabel:'Design to launch',
+    services:['Dashboard UI/UX Design','Data visualisation system','Design system creation','Frontend development'],
+    challengeTitle:'Data without clarity is just noise.',
+    challengeText:'Grovia\'s platform aggregated complex growth data from multiple sources — but the existing dashboard made that data hard to read and even harder to act on. Sales teams were spending more time interpreting the tool than using it. The product needed a complete UX and visual redesign, plus a robust design system to support future feature development — all under a tight 6-week timeline.',
+    approachTitle:'Visual hierarchy as the core design system.',
+    approachText:'We began by auditing how sales teams actually used the data — what decisions were being made, what information was needed first. From that, we built a data visualisation system prioritising the highest-signal metrics and burying the noise. We then designed and developed the full dashboard UI with a component library that allowed the client\'s team to extend the product independently after launch.',
+    results:[
+      {n:'6wk', label:'Design to launch', desc:'Full dashboard shipped on schedule'},
+      {n:'Full', label:'Component library', desc:'Extensible system for future features'},
+      {n:'↑', label:'Team adoption', desc:'Sales teams onboarded faster post-launch'},
+      {n:'1', label:'Visual system', desc:'Consistent data visualisation across modules'},
+    ]
+  },
+  { id:'vb', title:'Vaultboard', thumb:'pt-vb', abbr:'VB', image:'', tags:['design','dev','saas'],
+    industry:'FinTech · Asset Management',
+    cats:['Design','Development','SaaS'],
+    desc:'Product design and development for a fintech asset management platform. Balancing regulatory complexity with a consumer-grade experience was the core design challenge.',
+    result:'Clean, compliant, convertible',
+    resShort:'FinTech', resLabel:'Product design',
+    services:['Product strategy & architecture','UI/UX design','Component library','Web application development'],
+    challengeTitle:'Compliance and usability are not opposites.',
+    challengeText:'Vaultboard needed to handle complex asset management workflows — including regulatory requirements, portfolio views, and transaction histories — while feeling as approachable as a consumer finance app. Most fintech products choose one or the other. The brief was to build something that felt effortless to use, even when the underlying complexity was significant.',
+    approachTitle:'Consumer-grade experience. Institutional-grade architecture.',
+    approachText:'We began with product strategy — mapping all user roles and their distinct workflows before a single screen was designed. This allowed us to build a UI system that surfaced the right information at the right time without overwhelming users with regulatory complexity. We then designed and developed the full platform with a component library ensuring visual consistency across every module.',
+    results:[
+      {n:'Full', label:'Platform designed & built', desc:'Strategy through to production code'},
+      {n:'↑', label:'User confidence', desc:'Consumer-grade clarity on complex workflows'},
+      {n:'1', label:'Component library', desc:'Consistent across all platform modules'},
+      {n:'Clean', label:'Compliant & convertible', desc:'Regulatory needs met without UX sacrifice'},
+    ]
+  },
+  { id:'zn', title:'Zeno AI', thumb:'pt-zn', abbr:'ZN', image:'', tags:['design','brand','saas'],
+    industry:'AI Tools · Productivity',
+    cats:['Design','Branding','SaaS'],
+    desc:'Brand identity and SaaS interface design for an AI productivity tool. The visual language had to feel intelligent without feeling cold — premium without being sterile.',
+    result:'Brand to launch-ready in 5 weeks',
+    resShort:'5wk', resLabel:'Brand to launch',
+    services:['Brand identity design','Marketing website design','SaaS interface & onboarding','Pitch deck for fundraising'],
+    challengeTitle:'AI products that feel cold don\'t convert.',
+    challengeText:'Zeno AI had a genuinely useful productivity tool, but no brand and no interface. The founding team were approaching their first fundraising round and needed everything — brand, marketing site, product interface, and pitch deck — delivered on a timeline that matched their raise. The added challenge: the product had to feel warm and human, not robotic and generic like most AI tools.',
+    approachTitle:'Brand first, everything follows.',
+    approachText:'We started with brand identity — developing a visual language that balanced intelligence and warmth. A system that felt premium without feeling sterile. From there, we built the marketing website, product interface, and onboarding experience using that brand system as a foundation. The pitch deck was designed last, using the full brand identity to make a strong impression with investors.',
+    results:[
+      {n:'5wk', label:'Brand to launch-ready', desc:'From kickoff to full deliverable set'},
+      {n:'4', label:'Deliverables shipped', desc:'Brand, site, product, pitch deck'},
+      {n:'↑', label:'Investor confidence', desc:'Pitch deck used in active fundraise'},
+      {n:'Full', label:'Design system', desc:'Brand system applied across all touchpoints'},
+    ]
+  },
+];
+let currentId = null;
+let currentImage = '';
+function getProjects(){
+  const saved = localStorage.getItem('strixProjects');
+  if(saved){try{return JSON.parse(saved)}catch(e){}}
+  localStorage.setItem('strixProjects', JSON.stringify(DEFAULT_PROJECTS));
+  return DEFAULT_PROJECTS;
+}
+function setProjects(projects){localStorage.setItem('strixProjects', JSON.stringify(projects));}
+function renderList(){
+  const projects = getProjects();
+  document.getElementById('projectList').innerHTML = projects.map(p=>`<div class="project-item ${p.id===currentId?'active':''}" onclick="editProject('${p.id}')"><h3>${p.title}</h3><p>${p.industry || ''}</p></div>`).join('');
+}
+function editProject(id){
+  const p = getProjects().find(x=>x.id===id); if(!p) return;
+  currentId = p.id; currentImage = p.image || '';
+  ['id','abbr','title','industry','resShort','resLabel','desc','challengeTitle','challengeText','approachTitle','approachText'].forEach(k=>document.getElementById(k).value = p[k] || '');
+  document.getElementById('services').value = (p.services || []).join('
+');
+  document.getElementById('results').value = (p.results || []).map(r=>`${r.n} | ${r.label} | ${r.desc}`).join('
+');
+  const prev=document.getElementById('preview');
+  if(currentImage){prev.src=currentImage;prev.style.display='block';} else {prev.style.display='none';}
+  renderList();
+}
+function handleImage(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{currentImage=reader.result; const prev=document.getElementById('preview'); prev.src=currentImage; prev.style.display='block';};
+  reader.readAsDataURL(file);
+}
+function saveProject(){
+  const id=document.getElementById('id').value.trim(); if(!id){alert('Project ID required');return;}
+  const results=document.getElementById('results').value.split('
+').filter(Boolean).map(line=>{const p=line.split('|').map(x=>x.trim()); return {n:p[0]||'',label:p[1]||'',desc:p[2]||''};});
+  const old = getProjects().find(x=>x.id===currentId) || {};
+  const project={...old,id,image:currentImage,
+    abbr:document.getElementById('abbr').value.trim(),
+    title:document.getElementById('title').value.trim(),
+    industry:document.getElementById('industry').value.trim(),
+    resShort:document.getElementById('resShort').value.trim(),
+    resLabel:document.getElementById('resLabel').value.trim(),
+    desc:document.getElementById('desc').value.trim(),
+    challengeTitle:document.getElementById('challengeTitle').value.trim(),
+    challengeText:document.getElementById('challengeText').value.trim(),
+    approachTitle:document.getElementById('approachTitle').value.trim(),
+    approachText:document.getElementById('approachText').value.trim(),
+    services:document.getElementById('services').value.split('
+').filter(Boolean),
+    results
+  };
+  let projects=getProjects();
+  const idx=projects.findIndex(p=>p.id===currentId || p.id===id);
+  if(idx>=0) projects[idx]=project; else projects.push(project);
+  setProjects(projects); currentId=id; renderList(); alert('Saved');
+}
+function addProject(){clearForm(); document.getElementById('id').value='new-project'; document.getElementById('title').value='New Project';}
+function clearForm(){currentId=null; currentImage=''; document.querySelectorAll('input,textarea').forEach(el=>{if(el.type!=='file')el.value='';}); document.getElementById('imageInput').value=''; document.getElementById('preview').style.display='none'; renderList();}
+function deleteProject(){if(!currentId){alert('Select project first');return;} if(!confirm('Delete project?'))return; setProjects(getProjects().filter(p=>p.id!==currentId)); clearForm();}
+function resetData(){if(!confirm('Reset all data?'))return; localStorage.setItem('strixProjects', JSON.stringify(DEFAULT_PROJECTS)); clearForm();}
+renderList(); if(getProjects()[0]) editProject(getProjects()[0].id);
+</script>
+</body>
+</html>
