@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strix CMS Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Epilogue:ital,wght@0,200;0,300;0,400;0,500;1,200;1,300&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080808;--bg1:#0e0e0e;--bg2:#141414;--bg3:#1a1a1a;--bone:#EAE4D8;--silver:#8A8680;--line:rgba(138,134,128,0.18);--line2:rgba(138,134,128,0.35);--accent:#C8F5B0;--syne:'Syne',sans-serif;--epi:'Epilogue',sans-serif}
+body{background:radial-gradient(ellipse at 50% -15%, rgba(255,255,255,.18), transparent 45%),linear-gradient(180deg,#050505,var(--bg));color:var(--bone);font-family:var(--epi);font-weight:300;line-height:1.6;padding:2rem}
+h1,h2,h3{font-family:var(--syne)}
+.top{display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-bottom:2rem}
+.top a,.btn{background:var(--bone);color:var(--bg);border:none;border-radius:3px;padding:.75rem 1.15rem;text-decoration:none;font-size:.85rem;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.btn.secondary{background:transparent;color:var(--bone);border:.5px solid var(--line2)}
+.btn.danger{background:#301111;color:#fff;border:.5px solid #663333}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.layout{display:grid;grid-template-columns:320px 1fr;gap:1.25rem}
+.panel{background:linear-gradient(145deg,rgba(20,20,20,.95),rgba(8,8,8,.95));border:.5px solid var(--line);border-radius:4px;padding:1.25rem}
+.project-item{border:.5px solid var(--line);padding:1rem;border-radius:4px;margin:.75rem 0;cursor:pointer}
+.project-item.active,.project-item:hover{border-color:var(--line2);background:var(--bg3)}
+.project-item p{color:var(--silver);font-size:.82rem}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.full{grid-column:1/-1}
+label{display:block;color:var(--silver);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.4rem}
+input,textarea{width:100%;background:var(--bg2);border:.5px solid var(--line2);border-radius:3px;color:var(--bone);padding:.85rem 1rem;outline:none}
+textarea{min-height:115px;resize:vertical}
+.actions{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem}
+.preview{width:180px;height:110px;object-fit:cover;border:.5px solid var(--line2);border-radius:4px;margin-top:.75rem;display:none}
+.note{color:var(--silver);font-size:.9rem;margin-bottom:1rem}
+.status{margin:.75rem 0;color:var(--accent);font-size:.9rem}
+@media(max-width:900px){body{padding:1rem}.layout,.form-grid{grid-template-columns:1fr}.top{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+<div class="top">
+  <div>
+    <h1>Strix CMS Admin</h1>
+    <p class="note">Edit project content, case study text and image.</p>
+    <p id="status" class="status">Loading CMS...</p>
+  </div>
+  <a href="index.html">Open Website</a>
+</div>
+
+<div class="layout">
+  <aside class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem">
+      <h2>Projects</h2>
+      <button class="btn secondary" onclick="addProject()">+ Add</button>
+    </div>
+    <div id="projectList"></div>
+    <button class="btn danger" style="width:100%;margin-top:1rem" onclick="resetData()">Reset Default</button>
+  </aside>
+
+  <main class="panel">
+    <p class="note">This CMS is connected to Node.js + MongoDB backend. Keep backend running on port 5000 while testing locally.</p>
+    <div class="form-grid">
+      <div><label>Project ID</label><input id="id"></div>
+      <div><label>Short Name</label><input id="abbr"></div>
+      <div><label>Title</label><input id="title"></div>
+      <div><label>Industry</label><input id="industry"></div>
+      <div><label>Result Short</label><input id="resShort"></div>
+      <div><label>Result Label</label><input id="resLabel"></div>
+      <div class="full"><label>Description</label><textarea id="desc"></textarea></div>
+      <div class="full">
+        <label>Project Image</label>
+        <input id="imageInput" type="file" accept="image/*" onchange="handleImage(event)">
+        <img id="preview" class="preview">
+      </div>
+      <div><label>Challenge Title</label><input id="challengeTitle"></div>
+      <div><label>Approach Title</label><input id="approachTitle"></div>
+      <div class="full"><label>Challenge Text</label><textarea id="challengeText"></textarea></div>
+      <div class="full"><label>Approach Text</label><textarea id="approachText"></textarea></div>
+      <div class="full"><label>Deliverables - one per line</label><textarea id="services"></textarea></div>
+      <div class="full"><label>Results - Number | Label | Description, one per line</label><textarea id="results"></textarea></div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="saveBtn" onclick="saveProject()">Save Project</button>
+      <button class="btn secondary" onclick="clearForm()">Clear</button>
+      <button class="btn danger" onclick="deleteProject()">Delete</button>
+    </div>
+  </main>
+</div>
+
+<script>
+const API_URL = "http://localhost:5000/api/projects";
+
+const DEFAULT_PROJECTS = [
+  {
+    id:"kp", title:"The Kundli Pro", thumb:"pt-kp", abbr:"KP", image:"",
+    tags:["design","brand","mobile"], cats:["Design","Branding","Mobile App","MVP"],
+    industry:"Spiritual Tech · Mobile App",
+    desc:"Full rebrand, complete UX redesign, and mobile MVP development for a relaunching astrology platform.",
+    result:"50,000+ downloads · Trending on Play Store",
+    resShort:"50K+", resLabel:"App downloads",
+    services:["Rebranded visual identity","Redesigned website UI/UX","Designed & developed mobile app MVP","Created promotional videos & product visuals"],
+    challengeTitle:"A capable product no one was using.",
+    challengeText:"The product had strong features, but the brand looked dated and the app experience was confusing.",
+    approachTitle:"Redesigned from identity to interface.",
+    approachText:"We rebuilt the brand, UX flow, onboarding and promotional visuals.",
+    results:[
+      {n:"50K+", label:"App downloads", desc:"In the months following launch"},
+      {n:"#1", label:"Trending · Play Store", desc:"Peaked on launch week"},
+      {n:"Full", label:"Identity rebrand", desc:"Brand, app, and promo assets"},
+      {n:"1 team", label:"Zero handoffs", desc:"Design, dev & production under one roof"}
+    ]
+  },
+  {
+    id:"ri", title:"Ryvon Intelligence", thumb:"pt-ri", abbr:"RI", image:"",
+    tags:["design","dev","saas"], cats:["Design","Development","SaaS","MVP"],
+    industry:"SaaS · AI Platform",
+    desc:"End-to-end product design for an AI orchestration platform.",
+    result:"Under 3 weeks · Full design system delivered",
+    resShort:"<3wk", resLabel:"Idea to launch",
+    services:["Full information architecture","Command interface UX design","Dashboard & agent sidebar","Workflow builder design"],
+    challengeTitle:"Complex AI capabilities. Zero interface clarity.",
+    challengeText:"The product had powerful AI capabilities but needed a clear interface and handoff-ready design system.",
+    approachTitle:"Information architecture first, then design.",
+    approachText:"We mapped workflows, designed the command interface, dashboard, agent sidebar, and workflow builder.",
+    results:[
+      {n:"<3wk", label:"Concept to launch-ready", desc:"From kickoff to full handoff"},
+      {n:"Full", label:"Design system", desc:"Production-ready component library"},
+      {n:"5", label:"Core modules designed", desc:"Command, dashboard, agents, workflows, onboarding"}
+    ]
+  },
+  {
+    id:"aw", title:"Abhiwan Technology", thumb:"pt-aw", abbr:"AW", image:"",
+    tags:["design","brand"], cats:["Design","Branding","Web"],
+    industry:"Gaming · XR · Blockchain",
+    desc:"Enterprise website for a multi-vertical technology company.",
+    result:"Stronger global brand · Improved enterprise credibility",
+    resShort:"Global", resLabel:"Enterprise reach",
+    services:["Modern scalable website interface","Service architecture & product showcases","Visual consistency across all pages"],
+    challengeTitle:"Too much to say. No one was listening.",
+    challengeText:"The existing web presence made broad capabilities feel chaotic instead of impressive.",
+    approachTitle:"Architecture before aesthetics.",
+    approachText:"We restructured information architecture and built a visual system that communicated scale.",
+    results:[
+      {n:"Global", label:"Enterprise reach", desc:"Credible across US, UK & EU markets"},
+      {n:"4", label:"Verticals unified", desc:"XR, AI, blockchain & gaming"},
+      {n:"↑", label:"Enterprise credibility", desc:"Improved brand presence"}
+    ]
+  }
+];
+
+let projects = [];
+let currentId = null;
+let currentImage = "";
+
+function setStatus(msg){ document.getElementById("status").textContent = msg; }
+
+async function fetchProjects(){
+  try{
+    const res = await fetch("http://localhost:5000/api/projects");
+    if(!res.ok) throw new Error("API failed");
+    projects = await res.json();
+    setStatus(projects.length ? "CMS connected to backend ✅" : "Backend connected. Click Reset Default to seed data.");
+    renderList();
+    if(projects[0]) editProject(projects[0]._id);
+  }catch(err){
+    console.error(err);
+    setStatus("Backend not connected. Start backend: cd backend && node server.js");
+    projects = [];
+    renderList();
+  }
+}
+
+function renderList(){
+  document.getElementById("projectList").innerHTML = projects.map(p => `
+    <div class="project-item ${p._id===currentId ? "active" : ""}" onclick="editProject('${p.id}')">
+      <h3>${p.title || "Untitled Project"}</h3>
+      <p>${p.industry || ""}</p>
+    </div>
+  `).join("");
+}
+
+function editProject(id){
+  const p = projects.find(x => x.id === id);
+  if(!p) return;
+
+  currentId = p._id;
+  currentImage = p.image || "";
+
+  ["id","abbr","title","industry","resShort","resLabel","desc","challengeTitle","challengeText","approachTitle","approachText"].forEach(k => {
+    document.getElementById(k).value = p[k] || "";
+  });
+
+  document.getElementById("services").value = (p.services || []).join("\n");
+  document.getElementById("results").value = (p.results || []).map(r => `${r.n || ""} | ${r.label || ""} | ${r.desc || ""}`).join("\n");
+
+  const prev = document.getElementById("preview");
+  if(currentImage){
+    prev.src = currentImage;
+    prev.style.display = "block";
+  }else{
+    prev.style.display = "none";
+  }
+
+  renderList();
+}
+
+function handleImage(e){
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    currentImage = reader.result;
+    const prev = document.getElementById("preview");
+    prev.src = currentImage;
+    prev.style.display = "block";
+  };
+  reader.readAsDataURL(file);
+}
+
+function getFormProject(){
+  const id = document.getElementById("id").value.trim();
+  if(!id) throw new Error("Project ID required");
+
+  const results = document.getElementById("results").value.split("\n").filter(Boolean).map(line => {
+    const parts = line.split("|").map(x => x.trim());
+    return { n: parts[0] || "", label: parts[1] || "", desc: parts[2] || "" };
+  });
+
+  const old = projects.find(x => x._id === currentId) || {};
+
+  return {
+    ...old,
+    id,
+    image: currentImage,
+    abbr: document.getElementById("abbr").value.trim(),
+    title: document.getElementById("title").value.trim(),
+    industry: document.getElementById("industry").value.trim(),
+    resShort: document.getElementById("resShort").value.trim(),
+    resLabel: document.getElementById("resLabel").value.trim(),
+    desc: document.getElementById("desc").value.trim(),
+    challengeTitle: document.getElementById("challengeTitle").value.trim(),
+    challengeText: document.getElementById("challengeText").value.trim(),
+    approachTitle: document.getElementById("approachTitle").value.trim(),
+    approachText: document.getElementById("approachText").value.trim(),
+    services: document.getElementById("services").value.split("\n").filter(Boolean),
+    results
+  };
+}
+
+async function saveProject(){
+  const btn = document.getElementById("saveBtn");
+  try{
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+
+    const project = getFormProject();
+
+    const res = await fetch(`http://localhost:5000/api/projects/${currentId}`, {
+      method: "PUT",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(project)
+    });
+
+    if(!res.ok) throw new Error("Save failed");
+
+    const saved = await res.json();
+    const idx = projects.findIndex(p => p._id === saved._id);
+    if(idx >= 0) projects[idx] = saved;
+    else projects.push(saved);
+
+    currentId = saved._id;
+    currentImage = saved.image || "";
+    renderList();
+
+    alert("Project saved to backend ✅");
+  }catch(err){
+    console.error(err);
+    alert(err.message || "Save failed");
+  }finally{
+    btn.disabled = false;
+    btn.textContent = "Save Project";
+  }
+}
+
+function addProject(){
+  currentId = null;
+  currentImage = "";
+  document.querySelectorAll("input,textarea").forEach(el => {
+    if(el.type !== "file") el.value = "";
+  });
+  document.getElementById("imageInput").value = "";
+  document.getElementById("preview").style.display = "none";
+  document.getElementById("id").value = "new-project";
+  document.getElementById("title").value = "New Project";
+  renderList();
+}
+
+function clearForm(){
+  currentId = null;
+  currentImage = "";
+  document.querySelectorAll("input,textarea").forEach(el => {
+    if(el.type !== "file") el.value = "";
+  });
+  document.getElementById("imageInput").value = "";
+  document.getElementById("preview").style.display = "none";
+  renderList();
+}
+
+async function deleteProject(){
+  if(!currentId){
+    alert("Select project first");
+    return;
+  }
+  if(!confirm("Delete this project from backend?")) return;
+
+  try{
+    const res = await fetch(`http://localhost:5000/api/projects/${currentId}`, {
+  method: "DELETE"
+});
+    if(!res.ok) throw new Error("Delete failed");
+
+    projects = projects.filter(p => p._id !== currentId);
+    clearForm();
+    renderList();
+    alert("Deleted from backend ✅");
+  }catch(err){
+    console.error(err);
+    alert("Delete failed");
+  }
+}
+
+async function resetData(){
+  if(!confirm("This will replace backend data with default projects. Continue?")) return;
+
+  try{
+    const res = await fetch("http://localhost:5000/api/projects/seed/default", {
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({projects: DEFAULT_PROJECTS})
+    });
+
+    if(!res.ok) throw new Error("Reset failed");
+
+    projects = await res.json();
+    currentId = null;
+    renderList();
+    if(projects[0]) editProject(projects[0]._id);
+
+    alert("Default projects saved to backend ✅");
+  }catch(err){
+    console.error(err);
+    alert("Reset failed. Check backend.");
+  }
+}
+
+fetchProjects();
+</script>
+</body>
+</html>
