@@ -253,8 +253,13 @@ async function saveProject(){
 
     const project = getFormProject();
 
-    const res = await fetch(`https://strix-2pp0.onrender.com/api/projects/${currentId}`, {
-      method: "PUT",
+    const isNew = !currentId;
+    const url = isNew
+      ? `https://strix-2pp0.onrender.com/api/projects`
+      : `https://strix-2pp0.onrender.com/api/projects/${currentId}`;
+
+    const res = await fetch(url, {
+      method: isNew ? "POST" : "PUT",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify(project)
     });
