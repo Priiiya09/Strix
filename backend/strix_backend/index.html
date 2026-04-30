@@ -1400,7 +1400,7 @@ let PROJECTS = [];
 
 async function loadProjects() {
   try {
-    const res = await fetch("http://localhost:5000/api/projects");
+    const res = await fetch("https://strix-2pp0.onrender.com/api/projects");
     PROJECTS = await res.json();
 
     console.log("Projects:", PROJECTS);
